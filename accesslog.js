@@ -4,7 +4,7 @@ const accessLogSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: false // Some logs might not have a valid user ID (failed logins)
+        required: false 
     },
     studentId: {
         type: String,
@@ -33,16 +33,16 @@ const accessLogSchema = new mongoose.Schema({
     },
     details: {
         reason: {
-            type: String // Reason for failure/error
+            type: String 
         },
         oldRole: {
-            type: String // For role changes
+            type: String 
         },
         newRole: {
-            type: String // For role changes
+            type: String 
         },
         changes: {
-            type: mongoose.Schema.Types.Mixed // For profile updates
+            type: mongoose.Schema.Types.Mixed 
         }
     },
     session: {
@@ -81,20 +81,20 @@ const accessLogSchema = new mongoose.Schema({
         index: true
     }
 }, {
-    timestamps: false // We're using custom timestamp field
+    timestamps: false 
 });
 
-// Compound indexes for efficient queries
+
 accessLogSchema.index({ userId: 1, timestamp: -1 });
 accessLogSchema.index({ studentId: 1, timestamp: -1 });
 accessLogSchema.index({ action: 1, timestamp: -1 });
 accessLogSchema.index({ 'session.ip': 1, timestamp: -1 });
 accessLogSchema.index({ result: 1, timestamp: -1 });
 
-// TTL index to auto-delete logs older than 1 year
+
 accessLogSchema.index({ timestamp: 1 }, { expireAfterSeconds: 365 * 24 * 60 * 60 });
 
-// Static method to log access
+
 accessLogSchema.statics.logAccess = async function(logData) {
     try {
         const log = new this(logData);
@@ -102,11 +102,11 @@ accessLogSchema.statics.logAccess = async function(logData) {
         return log;
     } catch (error) {
         console.error('Error logging access:', error);
-        // Don't throw error to prevent breaking the main flow
+       
     }
 };
 
-// Static method to get user login history
+
 accessLogSchema.statics.getUserLoginHistory = function(userId, limit = 10) {
     return this.find({
         userId: userId,
@@ -117,7 +117,7 @@ accessLogSchema.statics.getUserLoginHistory = function(userId, limit = 10) {
     .select('action result session.ip session.userAgent timestamp details.reason');
 };
 
-// Static method to get failed login attempts
+
 accessLogSchema.statics.getFailedLoginAttempts = function(studentId, timeWindow = 15) {
     const since = new Date(Date.now() - timeWindow * 60 * 1000);
     
@@ -128,7 +128,7 @@ accessLogSchema.statics.getFailedLoginAttempts = function(studentId, timeWindow 
     });
 };
 
-// Static method to get login statistics
+
 accessLogSchema.statics.getLoginStats = function(dateRange = 7) {
     const since = new Date(Date.now() - dateRange * 24 * 60 * 60 * 1000);
     
@@ -165,13 +165,13 @@ accessLogSchema.statics.getLoginStats = function(dateRange = 7) {
     ]);
 };
 
-// Static method to get suspicious activity
+
 accessLogSchema.statics.getSuspiciousActivity = function(limit = 50) {
     return this.aggregate([
         {
             $match: {
                 action: 'LOGIN_FAILED',
-                timestamp: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+                timestamp: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } 
             }
         },
         {
@@ -187,7 +187,7 @@ accessLogSchema.statics.getSuspiciousActivity = function(limit = 50) {
         },
         {
             $match: {
-                attempts: { $gte: 3 } // 3 or more failed attempts
+                attempts: { $gte: 3 }
             }
         },
         {
@@ -199,30 +199,30 @@ accessLogSchema.statics.getSuspiciousActivity = function(limit = 50) {
     ]);
 };
 
-// Method to parse user agent for better logging
+
 accessLogSchema.methods.parseUserAgent = function() {
     const ua = this.session.userAgent;
     if (!ua) return;
 
-    // Simple user agent parsing (you might want to use a library like 'ua-parser-js')
+    
     let browser = 'Unknown';
     let os = 'Unknown';
     let device = 'Desktop';
 
-    // Browser detection
+ 
     if (ua.includes('Chrome')) browser = 'Chrome';
     else if (ua.includes('Firefox')) browser = 'Firefox';
     else if (ua.includes('Safari')) browser = 'Safari';
     else if (ua.includes('Edge')) browser = 'Edge';
 
-    // OS detection
+  
     if (ua.includes('Windows')) os = 'Windows';
     else if (ua.includes('Mac')) os = 'macOS';
     else if (ua.includes('Linux')) os = 'Linux';
     else if (ua.includes('Android')) os = 'Android';
     else if (ua.includes('iOS')) os = 'iOS';
 
-    // Device detection
+ 
     if (ua.includes('Mobile') || ua.includes('Android') || ua.includes('iPhone')) {
         device = 'Mobile';
     } else if (ua.includes('Tablet') || ua.includes('iPad')) {
@@ -234,12 +234,13 @@ accessLogSchema.methods.parseUserAgent = function() {
     this.session.device = device;
 };
 
-// Pre-save middleware to parse user agent
+
 accessLogSchema.pre('save', function(next) {
     if (this.isNew && this.session.userAgent) {
         this.parseUserAgent();
     }
     next();
 });
+
 
 module.exports = mongoose.model('AccessLog', accessLogSchema);
